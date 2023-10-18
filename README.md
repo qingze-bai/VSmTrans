@@ -1,7 +1,5 @@
 # A Hybrid Paradigm Integrate Self-attention and Convolution on 3D Medical Image Segmentation
 
-Tiange Liu, Qingze Bai, Drew A. Torigian, Yubing Tong, Jayaram K. Udupa
-
 [[`Paper`](#)] [[`Dataset`](https://amos22.grand-challenge.org/)] [[`BibTeX`](#)]
 
 ![Variable-Shape design](assets/fig01.jpg?raw=true)
