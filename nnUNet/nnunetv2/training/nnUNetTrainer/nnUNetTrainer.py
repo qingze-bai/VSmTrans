@@ -62,8 +62,7 @@ from torch import distributed as dist
 from torch.cuda import device_count
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
-from nnunetv2.training.nnUNetTrainer.VSmTrans import VSmixTUnet
-from nnunetv2.training.nnUNetTrainer.HybridPoolingLinearTransformer import HybridPoolingLinearTransformer
+from nnunetv2.training.nnUNetTrainer.vsmt import VSmixTUnet
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
@@ -294,7 +293,7 @@ class nnUNetTrainer(object):
         return VSmixTUnet(in_channels=1,
                           out_channels=16,
                           feature_size=48,
-                          split_size=[1, 3, 5, 7],
+                          split_size=[1, 2, 3, 4],
                           window_size=7,
                           num_heads=[3, 6, 12, 24],
                           img_size=[96, 96, 96],
@@ -907,7 +906,7 @@ class nnUNetTrainer(object):
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with autocast(self.device.type, enabled=False) if self.device.type == 'cuda' else dummy_context():
+        with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             # del data
             l = self.loss(output, target)
@@ -953,7 +952,7 @@ class nnUNetTrainer(object):
         # If the device_type is 'cpu' then it's slow as heck and needs to be disabled.
         # If the device_type is 'mps' then it will complain that mps is not implemented, even if enabled=False is set. Whyyyyyyy. (this is why we don't make use of enabled=False)
         # So autocast will only be active if we have a cuda device.
-        with autocast(self.device.type, enabled=False) if self.device.type == 'cuda' else dummy_context():
+        with autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
             output = self.network(data)
             del data
             l = self.loss(output, target)

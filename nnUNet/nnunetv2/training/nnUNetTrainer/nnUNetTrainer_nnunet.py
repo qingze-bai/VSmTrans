@@ -62,8 +62,7 @@ from torch import distributed as dist
 from torch.cuda import device_count
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
-from nnunetv2.training.nnUNetTrainer.vsmt import VSmixTUnet
-from nnunetv2.training.nnUNetTrainer.HybridPoolingLinearTransformer import HybridPoolingLinearTransformer
+
 
 class nnUNetTrainer(object):
     def __init__(self, plans: dict, configuration: str, fold: int, dataset_json: dict, unpack_dataset: bool = True,
@@ -210,19 +209,9 @@ class nnUNetTrainer(object):
                 self.num_input_channels,
                 self.enable_deep_supervision,
             ).to(self.device)
-#            self.network = HybridPoolingLinearTransformer(
-#        in_channels=1,
-#        out_channels=2,
-#        dim=48,
-#        num_blocks=2,
-#        dim_mult=(1,2,4,8),
-#        num_heads=(4,8,16,8),
-#        img_size=(96,96,96),
-#        pool_size=(16,16,16),
-#    ).to(self.device)
             # compile network for free speedup
             if self._do_i_compile():
-                self.print_to_log_file('Compiling network...')
+                self.print_to_log_file('Using torch.compile...')
                 self.network = torch.compile(self.network)
 
             self.optimizer, self.lr_scheduler = self.configure_optimizers()
@@ -481,7 +470,6 @@ class nnUNetTrainer(object):
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.network.parameters(), self.initial_lr, weight_decay=self.weight_decay,
                                     momentum=0.99, nesterov=True)
-        #optimizer = torch.optim.Adam(self.network.parameters(), lr=self.initial_lr, weight_decay=self.weight_decay)
         lr_scheduler = PolyLRScheduler(optimizer, self.initial_lr, self.num_epochs)
         return optimizer, lr_scheduler
 
@@ -1134,7 +1122,7 @@ class nnUNetTrainer(object):
         self.network.eval()
 
         predictor = nnUNetPredictor(tile_step_size=0.5, use_gaussian=True, use_mirroring=True,
-                                    perform_everything_on_gpu=True, device=self.device, verbose=False,
+                                    perform_everything_on_device=True, device=self.device, verbose=False,
                                     verbose_preprocessing=False, allow_tqdm=False)
         predictor.manual_initialization(self.network, self.plans_manager, self.configuration_manager, None,
                                         self.dataset_json, self.__class__.__name__,
@@ -1186,9 +1174,9 @@ class nnUNetTrainer(object):
                 try:
                     prediction = predictor.predict_sliding_window_return_logits(data)
                 except RuntimeError:
-                    predictor.perform_everything_on_gpu = False
+                    predictor.perform_everything_on_device = False
                     prediction = predictor.predict_sliding_window_return_logits(data)
-                    predictor.perform_everything_on_gpu = True
+                    predictor.perform_everything_on_device = True
 
                 prediction = prediction.cpu()
 
