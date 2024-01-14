@@ -1,5 +1,4 @@
 import inspect
-import itertools
 import multiprocessing
 import os
 import traceback
@@ -33,7 +32,7 @@ from nnunetv2.utilities.json_export import recursive_fix_for_json_export
 from nnunetv2.utilities.label_handling.label_handling import determine_num_input_channels
 from nnunetv2.utilities.plans_handling.plans_handler import PlansManager, ConfigurationManager
 from nnunetv2.utilities.utils import create_lists_from_splitted_dataset_folder
-from nnunetv2.training.nnUNetTrainer.HybridPoolingLinearTransformer import HybridPoolingLinearTransformer
+
 
 class nnUNetPredictor(object):
     def __init__(self,
@@ -466,7 +465,7 @@ class nnUNetPredictor(object):
 
                         # messing with state dict names...
                         if not isinstance(self.network, OptimizedModule):
-                            self.network.load_state_dict(params, strict=False)
+                            self.network.load_state_dict(params, False)
                         else:
                             self.network._orig_mod.load_state_dict(params)
 
@@ -547,14 +546,24 @@ class nnUNetPredictor(object):
         if mirror_axes is not None:
             # check for invalid numbers in mirror_axes
             # x should be 5d for 3d images and 4d for 2d. so the max value of mirror_axes cannot exceed len(x.shape) - 3
-            assert max(mirror_axes) <= x.ndim - 3, 'mirror_axes does not match the dimension of the input!'
+            assert max(mirror_axes) <= len(x.shape) - 3, 'mirror_axes does not match the dimension of the input!'
 
-            axes_combinations = [
-                c for i in range(len(mirror_axes)) for c in itertools.combinations([m + 2 for m in mirror_axes], i + 1)
-            ]
-            for axes in axes_combinations:
-                prediction += torch.flip(self.network(torch.flip(x, (*axes,))), (*axes,))
-            prediction /= (len(axes_combinations) + 1)
+            num_predictons = 2 ** len(mirror_axes)
+            if 0 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (2,))), (2,))
+            if 1 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (3,))), (3,))
+            if 2 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (4,))), (4,))
+            if 0 in mirror_axes and 1 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (2, 3))), (2, 3))
+            if 0 in mirror_axes and 2 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (2, 4))), (2, 4))
+            if 1 in mirror_axes and 2 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (3, 4))), (3, 4))
+            if 0 in mirror_axes and 1 in mirror_axes and 2 in mirror_axes:
+                prediction += torch.flip(self.network(torch.flip(x, (2, 3, 4))), (2, 3, 4))
+            prediction /= num_predictons
         return prediction
 
     def predict_sliding_window_return_logits(self, input_image: torch.Tensor) \
@@ -573,7 +582,7 @@ class nnUNetPredictor(object):
         # So autocast will only be active if we have a cuda device.
         with torch.no_grad():
             with torch.autocast(self.device.type, enabled=True) if self.device.type == 'cuda' else dummy_context():
-                assert input_image.ndim == 4, 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'
+                assert len(input_image.shape) == 4, 'input_image must be a 4D np.ndarray or torch.Tensor (c, x, y, z)'
 
                 if self.verbose: print(f'Input shape: {input_image.shape}')
                 if self.verbose: print("step_size:", self.tile_step_size)
@@ -598,7 +607,7 @@ class nnUNetPredictor(object):
                                                 device=results_device)
                     if self.use_gaussian:
                         gaussian = compute_gaussian(tuple(self.configuration_manager.patch_size), sigma_scale=1. / 8,
-                                                    value_scaling_factor=10,
+                                                    value_scaling_factor=1000,
                                                     device=results_device)
                 except RuntimeError:
                     # sometimes the stuff is too large for GPUs. In that case fall back to CPU
@@ -611,7 +620,7 @@ class nnUNetPredictor(object):
                                                 device=results_device)
                     if self.use_gaussian:
                         gaussian = compute_gaussian(tuple(self.configuration_manager.patch_size), sigma_scale=1. / 8,
-                                                    value_scaling_factor=10,
+                                                    value_scaling_factor=1000,
                                                     device=results_device)
                 finally:
                     empty_cache(self.device)
@@ -627,11 +636,6 @@ class nnUNetPredictor(object):
                     n_predictions[sl[1:]] += (gaussian if self.use_gaussian else 1)
 
                 predicted_logits /= n_predictions
-                # check for infs
-                if torch.any(torch.isinf(predicted_logits)):
-                    raise RuntimeError('Encountered inf in predicted array. Aborting... If this problem persists, '
-                                       'reduce value_scaling_factor in compute_gaussian or increase the dtype of '
-                                       'predicted_logits to fp32')
         empty_cache(self.device)
         return predicted_logits[tuple([slice(None), *slicer_revert_padding[1:]])]
 
@@ -801,7 +805,7 @@ def predict_entry_point():
     if not isdir(args.o):
         maybe_mkdir_p(args.o)
 
-    # slightly passive aggressive haha
+    # slightly passive agressive haha
     assert args.part_id < args.num_parts, 'Do you even read the documentation? See nnUNetv2_predict -h.'
 
     assert args.device in ['cpu', 'cuda',
