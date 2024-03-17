@@ -294,7 +294,7 @@ class nnUNetTrainer(object):
                           out_channels=16,
                           feature_size=48,
                           split_size=[1, 2, 3, 4],
-                          window_size=7,
+                          window_size=6,
                           num_heads=[3, 6, 12, 24],
                           img_size=[96, 96, 96],
                           depths=[2, 2, 2, 2],

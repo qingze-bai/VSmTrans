@@ -9,12 +9,13 @@ The **VSmTrans** is a hybrid Transformer that tightly integrates self-attention 
 
 ## Installation
 
-The code requires `python>=3.9`, as well as `pytorch>1.12`. Please follow the instructions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
+The code requires `python>=3.9`, as well as `pytorch>1.12`. Please follow the instru[nnUNetTrainer.py](nnUNet%2Fnnunetv2%2Ftraining%2FnnUNetTrainer%2FnnUNetTrainer.py)ctions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
 
 Install nnUNet:
 ```
 cd nnUNet
 pip install -e .
+pip install einops timm monai
 ```
 
 Our model relies on the nnU-Net framework, and its needs to know where you intend to save raw data, preprocessed data and trained models. For this you need to set a few environment variables. Please follow the instructions
@@ -140,13 +141,13 @@ self.network = VSmixTUnet(
     in_channels=1,
     out_channels=16,
     feature_size=48,
-    split_size=[1, 3, 5, 7],
+    split_size=[1, 2, 3, 4],
     window_size=6,
     num_heads=[3, 6, 12, 24],
     img_size=[96, 96, 96],
     depths=[2, 2, 2, 2],
     patch_size=(2, 2, 2),
-    do_ds=True
+    do_ds=enable_deep_supervision
 )
 ```
 
