@@ -9,7 +9,7 @@ The **VSmTrans** is a hybrid Transformer that tightly integrates self-attention 
 
 ## Installation
 
-The code requires `python>=3.9`, as well as `pytorch>1.12`. Please follow the instru[nnUNetTrainer.py](nnUNet%2Fnnunetv2%2Ftraining%2FnnUNetTrainer%2FnnUNetTrainer.py)ctions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
+The code requires `python>=3.9`, as well as `pytorch>1.12`. Please follow the instructions [here](https://pytorch.org/get-started/locally/) to install both PyTorch and TorchVision dependencies. Installing both PyTorch and TorchVision with CUDA support is strongly recommended.
 
 Install nnUNet:
 ```
