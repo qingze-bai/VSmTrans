@@ -152,3 +152,4 @@ self.network = VSmixTUnet(
 ```
 
 ## Citation
+Liu T, Bai Q, Torigian DA, Tong Y, Udupa JK. VSmTrans: A hybrid paradigm integrating self-attention and convolution for 3D medical image segmentation. Med Image Anal. 2024;98:103295. doi: 10.1016/j.media.2024.103295. PubMed PMID: 39217673; PMCID: PMC11381179.
